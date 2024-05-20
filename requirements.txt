@@ -1,7 +1,6 @@
 streamlit
-pandas
+streamlit_folium
 duckdb
-folium
-streamlit-folium
 dropbox
+folium
 arcgis

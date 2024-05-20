@@ -19,7 +19,7 @@ ARC_GIS_PWORD = st.secrets["ARC_GIS_PWORD"]
 dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 # Define the path to the DuckDB database file in Dropbox
-dbx_path = 'DVIPS.db'
+dbx_path = '/Plastic Regulations Database/DVIPS.db'
 
 # Download the DuckDB file from Dropbox
 local_path = 'DVIPS.db'

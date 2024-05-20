@@ -4,3 +4,4 @@ duckdb
 dropbox
 folium
 geopy
+arcgis

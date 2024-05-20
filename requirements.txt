@@ -1,6 +1,5 @@
 streamlit
-streamlit_folium
 duckdb
 dropbox
 folium
-geopy
+streamlit-folium

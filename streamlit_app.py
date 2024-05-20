@@ -1,53 +1,80 @@
 import streamlit as st
-import os
-import duckdb
-import dropbox
 import pandas as pd
+import duckdb
 import folium
 from streamlit_folium import st_folium
+import dropbox
+import os
 from arcgis.gis import GIS
-from arcgis.features import FeatureLayer
-from arcgis.mapping import WebMap
+from arcgis.geocoding import geocode
 
+# Retrieve secrets from environment variables
+dbx_token = os.getenv("DROPBOX_ACCESS_TOKEN")
+arcgis_uname = os.getenv("ARC_GIS_UNAME")
+arcgis_pword = os.getenv("ARC_GIS_PWORD")
+
+dbx_path = "/Plastic Regulations Database/DVIPS.db"
+
+# Display Header
 st.title("Plastic Regulations Map")
 
-# Load secrets
-DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
-ARC_GIS_UNAME = st.secrets["ARC_GIS_UNAME"]
-ARC_GIS_PWORD = st.secrets["ARC_GIS_PWORD"]
+# Dropbox section
+st.header("Dropbox Data")
+if dbx_token:
+    # Initialize Dropbox client
+    dbx = dropbox.Dropbox(dbx_token)
 
-# Connect to Dropbox
-dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
+    # Download the DuckDB file from Dropbox
+    try:
+        _, res = dbx.files_download(dbx_path)
+        with open("DVIPS.db", "wb") as f:
+            f.write(res.content)
 
-# Define the path to the DuckDB database file in Dropbox
-dbx_path = '/Plastic Regulations Database/DVIPS.db'
+        # Connect to the DuckDB database
+        con = duckdb.connect("DVIPS.db")
 
-# Download the DuckDB file from Dropbox
-local_path = 'DVIPS.db'
-with open(local_path, "wb") as f:
-    metadata, res = dbx.files_download(path=dbx_path)
-    f.write(res.content)
+        # Load data from the database
+        df = con.execute("SELECT * FROM PlasticRegulations").fetchdf()
 
-# Connect to DuckDB
-con = duckdb.connect(local_path)
+        # Display data in a table
+        st.dataframe(df)
 
-# Load data from DuckDB
-df = con.execute("SELECT * FROM PlasticRegulations LIMIT 100").fetchdf()
+        # Create a map using Folium
+        m = folium.Map(location=[0, 0], zoom_start=2)
 
-# Connect to ArcGIS
-gis = GIS("https://www.arcgis.com", ARC_GIS_UNAME, ARC_GIS_PWORD)
+        # Add markers to the map
+        for _, row in df.iterrows():
+            if pd.notna(row["Latitude"]) and pd.notna(row["Longitude"]):
+                folium.Marker(
+                    location=[row["Latitude"], row["Longitude"]],
+                    popup=row["Title"]
+                ).add_to(m)
 
-# Create a Folium map
-m = folium.Map(location=[20, 0], zoom_start=2)
+        # Display the map in Streamlit
+        st_folium(m, width=700, height=500)
 
-# Add data points to the map
-for idx, row in df.iterrows():
-    if not pd.isna(row['Latitude']) and not pd.isna(row['Longitude']):
-        folium.Marker(
-            location=[row['Latitude'], row['Longitude']],
-            popup=f"{row['Title']} - {row['Country/Territory']}",
-            tooltip=row['Title']
-        ).add_to(m)
+    except dropbox.exceptions.ApiError as e:
+        st.error(f"Failed to download file from Dropbox: {e}")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+else:
+    st.error("Dropbox access token not found. Please add it as a GitHub secret.")
 
-# Display the map in Streamlit
-st_folium(m, width=700, height=500)
+# ArcGIS section
+st.header("ArcGIS Geocoding")
+if arcgis_uname and arcgis_pword:
+    try:
+        # Connect to ArcGIS
+        gis = GIS("https://www.arcgis.com", arcgis_uname, arcgis_pword)
+
+        # Geocode example
+        result = geocode("United States", max_locations=1, out_sr={"wkid": 4326})
+        if result and len(result) > 0:
+            location_data = result[0]
+            st.write(f"Geocode result for United States: {location_data['location']}")
+        else:
+            st.write("No geocode result found for United States.")
+    except Exception as e:
+        st.error(f"An error occurred while geocoding: {e}")
+else:
+    st.error("ArcGIS credentials not found. Please add them as GitHub secrets.")

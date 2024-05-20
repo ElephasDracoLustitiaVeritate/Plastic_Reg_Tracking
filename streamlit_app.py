@@ -5,8 +5,9 @@ import dropbox
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
-from geopy.exc import GeocoderTimedOut
+from arcgis.gis import GIS
+from arcgis.features import FeatureLayer
+from arcgis.mapping import WebMap
 
 st.title("Plastic Regulations Map")
 
@@ -33,19 +34,8 @@ con = duckdb.connect(local_path)
 # Load data from DuckDB
 df = con.execute("SELECT * FROM PlasticRegulations LIMIT 100").fetchdf()
 
-# Geocode using geopy
-geolocator = Nominatim(user_agent="plastic-regulations-map")
-
-def geocode_location(location):
-    try:
-        return geolocator.geocode(location)
-    except GeocoderTimedOut:
-        return None
-
-# Add geocoded coordinates to DataFrame
-df['Geocode'] = df['Country/Territory'].apply(geocode_location)
-df['Latitude'] = df['Geocode'].apply(lambda loc: loc.latitude if loc else None)
-df['Longitude'] = df['Geocode'].apply(lambda loc: loc.longitude if loc else None)
+# Connect to ArcGIS
+gis = GIS("https://www.arcgis.com", ARC_GIS_UNAME, ARC_GIS_PWORD)
 
 # Create a Folium map
 m = folium.Map(location=[20, 0], zoom_start=2)

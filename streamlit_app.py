@@ -1,14 +1,8 @@
 import streamlit as st
-import pandas as pd
-import duckdb
-import folium
-from streamlit_folium import st_folium
-import dropbox
 import os
-from arcgis.gis import GIS
-from arcgis.geocoding import geocode
 
-st.title("Plastic Regulations Map")
+DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
+ARC_GIS_UNAME = st.secrets["ARC_GIS_UNAME"]
+ARC_GIS_PWORD = st.secrets["ARC_GIS_PWORD"]
 
-# Test imports by displaying simple messages
-st.write("All imports successful.")
+st.write("Secrets loaded successfully.")

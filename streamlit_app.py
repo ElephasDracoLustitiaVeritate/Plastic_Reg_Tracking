@@ -1,24 +1,27 @@
 import streamlit as st
+import os
 import duckdb
+import dropbox
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
-import requests
 
-# URL to the Dropbox file
-dropbox_url = "https://www.dropbox.com/scl/fi/lcw0m38r8ky2xqa4p1vhn/DVIPS.db?rlkey=gstg6qpawkxfl3sx7xagylqz8&st=zo86erew&dl=1"
+# Load secrets
+DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
 
-# Local path to save the downloaded file
+# Initialize Dropbox client
+dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
+
+# Path to the DuckDB database file in Dropbox
+dbx_path = "/EDLV Sustainability Regulations/DVIPS.db"
 local_db_path = "DVIPS.db"
 
-# Download the file from Dropbox
-with requests.get(dropbox_url, stream=True) as r:
-    with open(local_db_path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
+# Download the database file from Dropbox
+with open(local_db_path, "wb") as f:
+    metadata, res = dbx.files_download(path=dbx_path)
+    f.write(res.content)
 
-# Connect to the local DuckDB database
+# Connect to the DuckDB database
 con = duckdb.connect(local_db_path)
 
 # Load the geocoded regulations data

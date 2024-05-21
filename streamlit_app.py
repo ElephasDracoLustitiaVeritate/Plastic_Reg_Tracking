@@ -35,14 +35,17 @@ try:
     st.write("Contents of geo_regulations table:")
     st.write(geo_regulations_df)
 
-    # Check for 'Country_Latitude' and 'Country_Longitude' columns
+    # Check for latitude and longitude columns
     if 'Country_Latitude' in geo_regulations_df.columns and 'Country_Longitude' in geo_regulations_df.columns:
         # Create a folium map
         m = folium.Map(location=[geo_regulations_df['Country_Latitude'].mean(), geo_regulations_df['Country_Longitude'].mean()], zoom_start=2)
 
         # Add points to the map
         for _, row in geo_regulations_df.iterrows():
-            folium.Marker(location=[row['Country_Latitude'], row['Country_Longitude']], popup=row['Regulation']).add_to(m)
+            lat = row['Country_Latitude'] if pd.notna(row['Country_Latitude']) else row['Territory_Latitude']
+            lon = row['Country_Longitude'] if pd.notna(row['Country_Longitude']) else row['Territory_Longitude']
+            if pd.notna(lat) and pd.notna(lon):
+                folium.Marker(location=[lat, lon], popup=row['Title']).add_to(m)
 
         # Display the map in Streamlit
         st_data = st_folium(m, width=700, height=500)

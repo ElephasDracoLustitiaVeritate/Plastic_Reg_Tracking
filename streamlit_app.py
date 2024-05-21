@@ -8,42 +8,58 @@ from streamlit_folium import st_folium
 
 # Load secrets
 DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
-DROPBOX_APP_KEY = st.secrets["DROPBOX_APP_KEY"]
-DROPBOX_APP_SECRET = st.secrets["DROPBOX_APP_SECRET"]
-ARC_GIS_UNAME = st.secrets["ARC_GIS_UNAME"]
-ARC_GIS_PWORD = st.secrets["ARC_GIS_PWORD"]
 
 # Initialize Dropbox client
 dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 
 # Path to the DuckDB database file in Dropbox
-dbx_path = "/EDLV Sustainability Regulations/DVIPS.db"
+dbx_path = "/Nicholas Polich/Apps/EDLV Sustainability Regulations/DVIPS.db"
 local_db_path = "DVIPS.db"
 
+# Function to download the database file from Dropbox
+def download_db():
+    try:
+        metadata, res = dbx.files_download(path=dbx_path)
+        with open(local_db_path, "wb") as f:
+            f.write(res.content)
+        st.success("Database downloaded successfully.")
+    except dropbox.exceptions.ApiError as e:
+        st.error(f"Dropbox API error: {e}")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+
 # Download the database file from Dropbox
-with open(local_db_path, "wb") as f:
-    metadata, res = dbx.files_download(path=dbx_path)
-    f.write(res.content)
+download_db()
 
 # Connect to the DuckDB database
-con = duckdb.connect(local_db_path)
+try:
+    con = duckdb.connect(local_db_path)
+    st.success("Connected to DuckDB successfully.")
+except Exception as e:
+    st.error(f"Error connecting to DuckDB: {e}")
 
 # Load the geocoded regulations data
-geo_regulations = con.execute("SELECT * FROM geo_regulations").fetchdf()
+try:
+    geo_regulations = con.execute("SELECT * FROM geo_regulations").fetchdf()
+    st.success("Data loaded successfully.")
+except Exception as e:
+    st.error(f"Error loading data from DuckDB: {e}")
 
 # Close the connection
 con.close()
 
-# Create a folium map centered on a default location
-m = folium.Map(location=[0, 0], zoom_start=2)
+# Display the data
+st.write(geo_regulations)
 
-# Add points to the map
+# Create a folium map
+m = folium.Map(location=[20, 0], zoom_start=2)
+
+# Add regulations to the map
 for idx, row in geo_regulations.iterrows():
     folium.Marker(
         location=[row['Latitude'], row['Longitude']],
-        popup=f"Title: {row['Title']}<br>Date: {row['Date']}<br>Status: {row['Status']}<br>URL: {row['URL']}",
+        popup=row['Title']
     ).add_to(m)
 
-# Display the map in Streamlit
-st.title("Plastic Regulations Interactive Map")
-st_folium(m, width=700, height=500)
+# Display the map
+st_folium(m, width=725)

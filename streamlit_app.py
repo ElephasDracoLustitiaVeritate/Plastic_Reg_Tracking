@@ -8,6 +8,10 @@ from streamlit_folium import st_folium
 
 # Load secrets
 DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
+DROPBOX_APP_KEY = st.secrets["DROPBOX_APP_KEY"]
+DROPBOX_APP_SECRET = st.secrets["DROPBOX_APP_SECRET"]
+ARC_GIS_UNAME = st.secrets["ARC_GIS_UNAME"]
+ARC_GIS_PWORD = st.secrets["ARC_GIS_PWORD"]
 
 # Initialize Dropbox client
 dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)

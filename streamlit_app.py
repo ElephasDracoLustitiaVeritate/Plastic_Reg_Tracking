@@ -5,9 +5,6 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 
-# Set Streamlit server config to increase max message size
-st.set_option('server.maxMessageSize', 500)
-
 # Load secrets
 DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
 

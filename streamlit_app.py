@@ -15,23 +15,51 @@ dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
 dbx_path = "/DVIPS.db"
 local_db_path = "DVIPS.db"
 
+@st.cache_data
+def get_dbx_file(dbx_path, local_db_path):
+    try:
+        st.write("Authenticating with Dropbox...")
+        # Get account information to verify authentication
+        account_info = dbx.users_get_current_account()
+        st.write(f"Authenticated as: {account_info.name.display_name}")
+
+        # Download the database file from Dropbox
+        with open(local_db_path, "wb") as f:
+            metadata, res = dbx.files_download(path=dbx_path)
+            f.write(res.content)
+        st.write(f"Downloaded {dbx_path} to {local_db_path}")
+    except dropbox.exceptions.AuthError as e:
+        st.error(f"Error authenticating with Dropbox: {e}")
+    except dropbox.exceptions.ApiError as e:
+        st.error(f"API error: {e}")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+
+def load_data_in_chunks(con, chunk_size=1000):
+    offset = 0
+    while True:
+        query = f"SELECT * FROM geo_regulations LIMIT {chunk_size} OFFSET {offset}"
+        df_chunk = con.execute(query).fetchdf()
+        if df_chunk.empty:
+            break
+        yield df_chunk
+        offset += chunk_size
+
+# Get the database file from Dropbox
+get_dbx_file(dbx_path, local_db_path)
+
 try:
-    st.write("Authenticating with Dropbox...")
-    # Get account information to verify authentication
-    account_info = dbx.users_get_current_account()
-    st.write(f"Authenticated as: {account_info.name.display_name}")
-
-    # Download the database file from Dropbox
-    with open(local_db_path, "wb") as f:
-        metadata, res = dbx.files_download(path=dbx_path)
-        f.write(res.content)
-    st.write(f"Downloaded {dbx_path} to {local_db_path}")
-
     # Connect to the DuckDB database
     con = duckdb.connect(local_db_path)
 
-    # Load the geo_regulations table into a DataFrame
-    geo_regulations_df = con.execute("SELECT * FROM geo_regulations").fetchdf()
+    # Initialize an empty DataFrame
+    geo_regulations_df = pd.DataFrame()
+
+    # Load the data in chunks
+    for chunk in load_data_in_chunks(con):
+        geo_regulations_df = pd.concat([geo_regulations_df, chunk], ignore_index=True)
+        st.write(f"Loaded {len(geo_regulations_df)} records")
+
     st.write("Contents of geo_regulations table:")
     st.write(geo_regulations_df)
 
@@ -54,9 +82,5 @@ try:
 
     # Close the connection
     con.close()
-except dropbox.exceptions.AuthError as e:
-    st.error(f"Error authenticating with Dropbox: {e}")
-except dropbox.exceptions.ApiError as e:
-    st.error(f"API error: {e}")
 except Exception as e:
     st.error(f"An error occurred: {e}")

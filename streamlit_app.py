@@ -5,7 +5,7 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 
-# Load secrets
+# Access token
 DROPBOX_ACCESS_TOKEN = st.secrets["DROPBOX_ACCESS_TOKEN"]
 
 # Initialize Dropbox client
@@ -35,20 +35,19 @@ try:
     st.write("Contents of geo_regulations table:")
     st.write(geo_regulations_df)
 
-    # Create a map centered around a global view
-    m = folium.Map(location=[0, 0], zoom_start=2)
+    # Check for 'Country_Latitude' and 'Country_Longitude' columns
+    if 'Country_Latitude' in geo_regulations_df.columns and 'Country_Longitude' in geo_regulations_df.columns:
+        # Create a folium map
+        m = folium.Map(location=[geo_regulations_df['Country_Latitude'].mean(), geo_regulations_df['Country_Longitude'].mean()], zoom_start=2)
 
-    # Add points to the map
-    for index, row in geo_regulations_df.iterrows():
-        folium.Marker(
-            location=[row['Latitude'], row['Longitude']],
-            popup=row['Regulation Name'],
-            tooltip=row['Country/Territory']
-        ).add_to(m)
+        # Add points to the map
+        for _, row in geo_regulations_df.iterrows():
+            folium.Marker(location=[row['Country_Latitude'], row['Country_Longitude']], popup=row['Regulation']).add_to(m)
 
-    # Display the map
-    st.write("Interactive Map of Regulations")
-    st_folium(m, width=700, height=500)
+        # Display the map in Streamlit
+        st_data = st_folium(m, width=700, height=500)
+    else:
+        st.error("The required columns 'Country_Latitude' and 'Country_Longitude' are not present in the DataFrame.")
 
     # Close the connection
     con.close()
